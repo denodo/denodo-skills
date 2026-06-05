@@ -2,6 +2,9 @@
 name: denodo-vql-generation
 description: Guidelines to follow when generating valid Denodo VQL queries to execute in the Denodo Platform.
 license: Complete terms in LICENSE.txt
+metadata:
+  author: Denodo Technologies
+  version: "1.1"
 ---
 
 # VQL Generation
@@ -24,71 +27,119 @@ SELECT
     "c"."CustomerID" AS "Customer",
     "o"."OrderID"
 FROM
-    "お客様"."Clients" c
+    "お客様"."Clients" "c"
 JOIN
-    "お客様"."Orders" o
+    "お客様"."Orders" "o"
 ON
     "c"."CustomerID" = "o"."CustomerID";
 ```
 
-3. CAST is supported in VQL with these types:
+In the schema, views may appear under this quoting style. Generating SELECT * FROM employees without quotes will fail.
 
-- BOOL
-- CHAR
-- DECIMAL
-- FLOAT
-- FLOAT4
-- FLOAT8
-- INT2
-- INT4
-- INT8
-- INTEGER
-- REAL
-- TEXT
-- VARCHAR
+3. VQL supports the following simple data types:
 
-Valid example using INT2:
+- blob
+- boolean
+- date
+- decimal
+- double
+- float
+- int
+- intervaldaysecond
+- intervalyearmonth
+- localdate
+- long
+- text
+- time
+- timestamp
+- timestamptz
+- vector<double, <integer> >.  A sequence of double numbers with a specified integer length.
+- vector<float, <integer> >
+- vector<int, <integer> >
+- vector<long, <integer> >
+- xml
+
+And the following compound data types:
+
+- register. A register of simple data types.
+- array. An array-type element must be viewed as a subview. An array will always have a register type associated.
+Each subelement contained in the array will belong to this register data type.
+
+Compound data types can be defined with an alias in the schema, in which case [STRUCT] (register) or [ARRAY] (array) will be used as the data type.
+
+For example, a view with the following schema:
+
+# Table: "organization"."projects"
+## Columns:
+- project_id (int)
+- project_name (text)
+- project_workers ([STRUCT] project_workers_register)
+- project_related_projects ([ARRAY] project_related_projects_array)
+
+Where project_workers_register is a register with the following fields:
+- worker_id (int)
+- worker_full_name (text)
+
+And project_related_projects_array is an array associated with the project_related_ids register with the following fields:
+- project_id_value (int)
+
+Example of accessing register values to retrieve the project ID, the worker ID and the worker full name:
 
 ```vql
-SELECT CAST("quantity" AS INT2) FROM "organization"."hardware_bv"
+SELECT
+    "project_id",
+    "project_workers"."worker_id",
+    "project_workers"."worker_full_name"
+FROM "organization"."projects"
 ```
 
-4. VQL protected words cannot be used as aliases. The list of protected words is:
+Example of accessing array values to retrieve the first related project ID of a project:
 
-- BASE
-- DF
-- NOS
-- OBL
-- WS
+```vql
+SELECT
+    "project_id",
+    "project_related_projects"[0]."project_id_value" AS "first_related_project_id"
+FROM "organization"."projects"
+```
 
-5. VQL strings use single quotes: WHERE name = 'Joseph'. Single quotes can be escaped in VQL strings by doubling them: 'D''angelo' matches "D'angelo"
+You can use CAST with the supported VQL data types. Example of casting a text column to a decimal so it can be compared against a number:
 
-6. VQL string functions
+```vql
+SELECT "product_id", "price"
+FROM "store"."products"
+WHERE CAST('decimal', "price") > 100;
+```
 
-- **SUBSTR**(`string`, `start index`, `length?`). Index starts at 1. The length sets the number of characters to return and includes the index character. If `length` is omitted, the substring returns everything until the end of the string.
-  - SUBSTR('Artificial', 2, 5) → 'rtifi'
-  - SUBSTR('Artificial', 2) → 'rtificial'
+Only use CAST if necessary, as columns typically have the desired data type.
 
-- **CONCAT**(`str1`, `str2`, ..., `strN`). Joins strings together. Requires 2+ parameters.
-  - CONCAT(GETYEAR(date), '-', GETMONTH(date), '-', GETDAY(date))
+4. VQL strings use single quotes: WHERE name = 'Joseph'. Single quotes can be escaped in VQL strings by doubling them: 'D''angelo' matches D'angelo.
 
-- **LEN**(`string`). Returns string length.
+5. VQL string functions:
 
-- **POSITION**(`needle IN haystack`). Finds starting position of a substring.
-  - POSITION('no' IN 'Denodo') → 3
+- `SUBSTR(string, start index, length?)`. Index starts at 1. The length sets the number of characters to return and includes the index character. If length is omitted, the substring returns everything until the end of the string.
+  Example: SUBSTR('Artificial', 2, 5) → 'rtifi'
+  Example: SUBSTR('Artificial', 2) → 'rtificial'
 
-7. Subqueries (a CTE is also considered a subquery) are not allowed in HAVING clauses in VQL. Only simple conditions or aggregate functions comparing results to static values or other aggregates are permitted.
+- `CONCAT(str1, str2, ..., strN)`. Joins strings together. Requires 2+ parameters.
+  Example: CONCAT(GETYEAR(date), '-', GETMONTH(date), '-', GETDAY(date))
+
+- `LEN(string)`. Returns string length.
+
+- `POSITION(needle IN haystack)`. Finds starting position of a substring.
+  Example: POSITION('no' IN 'Denodo') returns 3
+
+6. Subqueries (a CTE is also considered a subquery) are not allowed in HAVING clauses in VQL. Only simple conditions or aggregate functions comparing results to static values or other aggregates are permitted.
 
 Valid example of a HAVING clause in VQL:
 
 ```vql
-SELECT "department", AVG(salary) AS "avg_salary"
+SELECT "department", AVG("salary") AS "avg_salary"
 FROM "organization"."employees"
 GROUP BY "department"
-HAVING AVG(salary) > 30000;
+HAVING AVG("salary") > 30000;
 ```
 
-Example of invalid HAVING clause (uses subquery `SELECT department...`):
+Example of invalid HAVING clause (uses subquery SELECT department...):
 
 ```vql
 SELECT "department", AVG(salary) AS "avg_salary"
@@ -97,7 +148,7 @@ GROUP BY "department"
 HAVING "department" IN (SELECT "department" FROM "organization"."managers" WHERE "status" = 'senior');
 ```
 
-Example of invalid VQL HAVING clause because it uses a CTE:
+Example of invalid HAVING clause because it uses a CTE:
 
 ```vql
 WITH salary_threshold AS (
@@ -109,7 +160,13 @@ GROUP BY "department"
 HAVING AVG(salary) > threshold;
 ```
 
-8. In VQL, LIMIT and FETCH can only be can only be used in the outer query and inside a CTE/FROM/WHERE clause subquery. LIMIT and FETCH cannot be used inside a SELECT clause subquery.
+7. The OFFSET, FETCH and LIMIT clauses limit the number of rows obtained when executing a query.
+
+Use OFFSET <number> ROWS to skip the first n rows of the result set.
+
+Use LIMIT [ <count> ] or FETCH FIRST [ <count> ] ROWS ONLY to obtain only <count> rows of the result set.
+
+However, LIMIT and FETCH can only be used in the outer query and inside a subquery that appears in a CTE body, FROM clause, or WHERE clause. LIMIT and FETCH cannot be used inside a SELECT clause subquery (for example a scalar subquery in the select list).
 
 This query works, because LIMIT is in the outer query:
 
@@ -117,6 +174,15 @@ This query works, because LIMIT is in the outer query:
 SELECT *
 FROM "bank"."customers"
 LIMIT 3;
+```
+
+This also works, because FETCH is in the outer query:
+
+```vql
+SELECT *
+FROM "bank"."customers"
+OFFSET 10 ROWS
+FETCH NEXT 10 ROWS ONLY;
 ```
 
 This query fails, because it uses LIMIT in a SELECT subquery:
@@ -134,11 +200,11 @@ SELECT
 FROM "bank"."customers" c;
 ```
 
-Some versions of Denodo don't accept LIMIT or FETCH in ANY subquery. If you face this error, review [how to fix LIMIT in subquery](references/fix_limit_in_subquery.md)
+Some versions of Denodo do not accept LIMIT or FETCH in any subquery. If your VQL fails for that reason, rewrite to an equivalent query without LIMIT or FETCH in any subquery by using ROW_NUMBER() and filtering on the row number in an outer query.
 
-9. In VQL, NULLS LAST is invalid in ORDER BY.
+8. In VQL, NULLS LAST is invalid in ORDER BY.
 
-10. In VQL, you cannot use aggregate functions directly in the ORDER BY clause if they are not projected in the SELECT list or projected but inside another function. To avoid this:
+9. In VQL, you cannot use aggregate functions directly in the ORDER BY clause if they are not projected in the SELECT list or projected but inside another function. To avoid this:
 
 - Create the alias name for the projected field
 - Use alias name in the ORDER BY clause.
@@ -159,6 +225,51 @@ SELECT "user", ROUND(SUM("amount") / 100000000, 2) AS "total_amount"
 FROM "bank"."customer"
 GROUP BY "user"
 ORDER BY SUM("amount");
+```
+
+11. Views with obligatory columns (marked with [OBLIGATORY] in the schema) are views that can only be queried by providing concrete values for those obligatory columns using the WHERE clause with either the '=' operator (for a single value) or the 'IN' operator (for multiple values). This restriction applies even when targeting other columns.
+
+IMPORTANT: Using generic conditions like 'IS NOT NULL', value ranges like 'BETWEEN', '>', '<', or omitting the field entirely is strictly invalid. This applies even when working with different columns. This restriction cannot be bypassed.
+
+For instance, assuming the view "organization"."employees" has an obligatory field named "department":
+
+Valid example of filtering by the obligatory field with a single concrete value:
+
+```vql
+SELECT "employee_id", "first_name", "last_name"
+FROM "organization"."employees"
+WHERE "department" = 'Engineering';
+```
+
+Valid example of filtering by the obligatory field with multiple concrete values using IN:
+
+```vql
+SELECT "employee_id", "first_name", "last_name"
+FROM "organization"."employees"
+WHERE "department" IN ('Engineering', 'Sales', 'HR');
+```
+
+Example of invalid query because it omits the obligatory field from the WHERE clause:
+
+```vql
+SELECT "employee_id", "first_name", "last_name"
+FROM "organization"."employees";
+```
+
+Example of invalid query because it uses IS NOT NULL instead of concrete values for the obligatory field:
+
+```vql
+SELECT "employee_id", "first_name", "last_name"
+FROM "organization"."employees"
+WHERE "department" IS NOT NULL;
+```
+
+Example of invalid query because it uses a range (BETWEEN) instead of discrete concrete values:
+
+```vql
+SELECT "employee_id", "first_name", "last_name"
+FROM "organization"."employees"
+WHERE "department" BETWEEN 'Engineering' AND 'Sales';
 ```
 
 ## Extra references

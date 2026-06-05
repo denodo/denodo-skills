@@ -3,35 +3,35 @@
 VQL supports the following LLM-powered functions.
 LLM-powered functions can be useful for summarization, translation and general prompting.
 
-- `CLASSIFY_AI(<value:text>, <classification scale:array>): text`. LLM-powered. Takes a given text and a classification scale as input, and returns an accurate classification based on the content of the text. Example:
+- `CLASSIFY_AI(<value:text>, <classification scale:array>):text`. LLM-powered. Takes a given text and a classification scale as input, and returns an accurate classification based on the content of the text. Example:
 
 ```vql
 SELECT
-        address,
+        "address",
         CLASSIFY_AI(
-            address,
+            "address",
             {
                 row('Number of street between 1-500'),
                 row('Number of street between 501-999'),
                 row('Number of street over 999')
             }
         ) AS classification
-FROM organization.customer;
+FROM "organization"."customer";
 ```
 
-- `ENRICH_AI(<prompt:text>): text`. LLM-powered. Queries the LLM with the provided prompt. For example, you can use this to extract information from a column, like this:
+- `ENRICH_AI(<prompt:text>):text`. LLM-powered. Queries the LLM with the provided prompt. For example, you can use this to extract information from a column, like this:
 
 ```vql
 SELECT
-address,
+"address",
 ENRICH_AI(
     CONCAT(
         'I need you to extract only the street name from this address: "',
-        address,
+        "address",
         '"\nLimit your response to just the street name and nothing else, like "Philips St"'
     )
 ) AS street
-FROM enterprise.customer;
+FROM "enterprise"."customer";
 ```
 
 - `ENRICH_AI_BINARY(<text prompt>, <binary blob>, <content type text>):text`. LLM-powered. Queries the LLM with the provided prompt and an image or a PDF document.

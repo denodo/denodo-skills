@@ -24,7 +24,7 @@ SELECT DIV(CAST(4 AS FLOAT), CAST(100 AS FLOAT))
 
 to get 0.04.
 
-In VQL, you must avoid division by zero by adding explict conditions to check for values different from 0.
+In VQL, you must avoid division by zero by adding explicit conditions to check for values different from 0.
 
 Invalid examples of dividing by zero:
 
