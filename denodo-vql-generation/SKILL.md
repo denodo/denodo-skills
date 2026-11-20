@@ -4,7 +4,7 @@ description: Guidelines to follow when generating valid Denodo VQL queries to ex
 license: Complete terms in LICENSE.txt
 metadata:
   author: Denodo Technologies
-  version: "1.1"
+  version: "1.2"
 ---
 
 # VQL Generation

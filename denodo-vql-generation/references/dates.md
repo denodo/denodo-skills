@@ -12,7 +12,7 @@
 
 ```vql
 SELECT COUNT("p"."payment_id") AS "count_payments"
-FROM "bank"."payments" AS p
+FROM "bank"."payments" AS "p"
 WHERE "p"."payment_date" BETWEEN
       TO_TIMESTAMPTZ('yyyy-MM-dd', '2023-01-01') AND
       TO_TIMESTAMPTZ('yyyy-MM-dd', '2023-12-31');
@@ -22,7 +22,7 @@ WHERE "p"."payment_date" BETWEEN
 
 ```vql
 SELECT COUNT("p"."payment_id") AS "count_payments"
-FROM "bank"."payments" AS p
+FROM "bank"."payments" AS "p"
 WHERE TO_TIMESTAMPTZ('yyyy-MM-dd', "p"."payment_date") BETWEEN
       TO_TIMESTAMPTZ('yyyy-MM-dd', '2023-01-01') AND
       TO_TIMESTAMPTZ('yyyy-MM-dd', '2023-12-31');
@@ -32,7 +32,7 @@ WHERE TO_TIMESTAMPTZ('yyyy-MM-dd', "p"."payment_date") BETWEEN
 
 ```vql
 SELECT COUNT("p"."payment_id") AS "count_payments"
-FROM "bank"."payments" AS p
+FROM "bank"."payments" AS "p"
 WHERE "p"."payment_date" BETWEEN ADDMONTH(NOW(), -3) AND NOW();
 ```
 
@@ -71,7 +71,7 @@ Functions:
 1. Get Month and Sum Revenue
 
 ```vql
-SELECT GETMONTH(date) AS "month", SUM(revenue)
+SELECT GETMONTH("date") AS "month", SUM("revenue") AS "total_revenue"
 FROM "organization"."sales_bv"
 GROUP BY "month";
 ```
